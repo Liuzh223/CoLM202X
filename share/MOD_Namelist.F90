@@ -154,6 +154,7 @@ MODULE MOD_Namelist
    LOGICAL :: DEF_URBAN_TREE   = .true.
    LOGICAL :: DEF_URBAN_WATER  = .true.
    LOGICAL :: DEF_URBAN_LUCY   = .true.
+   logical :: DEF_URBAN_IRRIG  = .true.
 
    ! ------ SOIL parameters and supercool water setting -------
    LOGICAL :: DEF_USE_SOILPAR_UPS_FIT = .true.     ! soil hydraulic parameters are upscaled from rawdata (1km resolution)
@@ -230,6 +231,9 @@ MODULE MOD_Namelist
 
    CHARACTER(len=256) :: DEF_hist_vars_namelist = 'null'
    LOGICAL :: DEF_hist_vars_out_default = .true.
+
+   ! ----- Data Assimilation -----
+   character(len=256) :: DEF_DA_obsdir = 'null'
 
    ! ----- forcing -----
    CHARACTER(len=256) :: DEF_forcing_namelist = 'null'
@@ -393,7 +397,7 @@ MODULE MOD_Namelist
       LOGICAL :: lfevp_gimp   = .true.
       LOGICAL :: lfevp_gper   = .true.
       LOGICAL :: lfevp_urbl   = .true.
-      LOGICAL :: urb_qflx_irrig   = .true.
+      LOGICAL :: urb_irrig    = .true.
       LOGICAL :: fhac         = .true.
       LOGICAL :: fwst         = .true.
       LOGICAL :: fach         = .true.
@@ -743,6 +747,7 @@ CONTAINS
          DEF_URBAN_TREE,                  &   !add by hua yuan, modeling urban tree or not
          DEF_URBAN_WATER,                 &   !add by hua yuan, modeling urban water or not
          DEF_URBAN_LUCY,                  &
+         DEF_URBAN_IRRIG,                 &
 
          DEF_USE_SOILPAR_UPS_FIT,         &
          DEF_THERMAL_CONDUCTIVITY_SCHEME, &
@@ -1144,6 +1149,7 @@ CONTAINS
       CALL mpi_bcast (DEF_URBAN_TREE,        1, mpi_logical, p_root, p_comm_glb, p_err)
       CALL mpi_bcast (DEF_URBAN_WATER,       1, mpi_logical, p_root, p_comm_glb, p_err)
       CALL mpi_bcast (DEF_URBAN_LUCY,        1, mpi_logical, p_root, p_comm_glb, p_err)
+      CALL mpi_bcast (DEF_URBAN_IRRIG,       1, mpi_logical, p_root, p_comm_glb, p_err)
 
       ! 06/2023, added by weinan
       CALL mpi_bcast (DEF_USE_SOILPAR_UPS_FIT,          1, mpi_logical, p_root, p_comm_glb, p_err)
@@ -1347,7 +1353,7 @@ CONTAINS
       CALL sync_hist_vars_one (DEF_hist_vars%lfevp_gimp  ,  set_defaults)
       CALL sync_hist_vars_one (DEF_hist_vars%lfevp_gper  ,  set_defaults)
       CALL sync_hist_vars_one (DEF_hist_vars%lfevp_urbl  ,  set_defaults)
-      CALL sync_hist_vars_one (DEF_hist_vars%urb_qflx_irrig      ,  set_defaults)
+      CALL sync_hist_vars_one (DEF_hist_vars%urb_irrig   ,  set_defaults)
       CALL sync_hist_vars_one (DEF_hist_vars%fhac        ,  set_defaults)
       CALL sync_hist_vars_one (DEF_hist_vars%fwst        ,  set_defaults)
       CALL sync_hist_vars_one (DEF_hist_vars%fach        ,  set_defaults)

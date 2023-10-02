@@ -104,8 +104,7 @@ SUBROUTINE UrbanCoLMMAIN ( &
            solni        ,srvd         ,srvi         ,srnd         ,&
            srni         ,solvdln      ,solviln      ,solndln      ,&
            solniln      ,srvdln       ,srviln       ,srndln       ,&
-           srniln       ,qcharge      ,&
-           urb_qflx_irrig,&
+           srniln       ,qcharge      ,urb_irrig    ,&
            xerr         ,zerr         ,&
 
          ! TUNABLE modle constants
@@ -121,6 +120,7 @@ SUBROUTINE UrbanCoLMMAIN ( &
 
   USE MOD_Precision
   USE MOD_Vars_Global
+  USE MOD_Namelist
   USE MOD_Const_Physical, only: tfrz, denh2o, denice
   USE MOD_Vars_TimeVariables, only: tlai, tsai
   USE MOD_SnowLayersCombineDivide
@@ -137,9 +137,7 @@ SUBROUTINE UrbanCoLMMAIN ( &
   USE MOD_SnowFraction, only: snowfraction
   USE MOD_ALBEDO, only: snowage
   USE MOD_Qsadv, only: qsadv
-#ifdef USE_LUCY
   USE MOD_Urban_LUCY
-#endif
 
   IMPLICIT NONE
 
@@ -450,7 +448,7 @@ SUBROUTINE UrbanCoLMMAIN ( &
         qinfl      ,&! inflitration (mm h2o/s)
         qdrip      ,&! throughfall (mm h2o/s)
         qcharge    ,&! groundwater recharge [mm/s]
-        urb_qflx_irrig  ,&!
+        urb_irrig  ,&! urban irrigation flux on previous ground [mm/s]
         rst        ,&! canopy stomatal resistance
         assim      ,&! canopy assimilation
         respc      ,&! canopy respiration
@@ -989,7 +987,7 @@ SUBROUTINE UrbanCoLMMAIN ( &
         lake_icefrac         ,scv_lake             ,snowdp_lake          ,imeltl               ,&
         fioldl               ,w_old                                                            ,&
         ! irrigation
-        idate                ,fveg                 ,lai                  ,patchlonr            ,&     
+        idate                ,fveg                 ,lai                  ,patchlonr            ,&
 #if(defined CaMa_Flood)
         flddepth             ,fldfrc               ,qinfl_fld                                  ,&
 #endif
@@ -1003,8 +1001,7 @@ SUBROUTINE UrbanCoLMMAIN ( &
 
         ! output
         rsur                 ,rnof                 ,qinfl                ,zwt                  ,&
-        wa                   ,qcharge              ,&
-        urb_qflx_irrig       ,&
+        wa                   ,qcharge              ,urb_irrig            ,&
         smp                  ,hk                   ,&
         errw_rsub            )
 
@@ -1162,6 +1159,7 @@ SUBROUTINE UrbanCoLMMAIN ( &
       endwb  = sum(wice_soisno(1:)+wliq_soisno(1:))
       endwb  = endwb + scv + ldew*fveg + wa*(1-froof)*fgper
       errorw = (endwb-totwb) - (forc_prc+forc_prl-fevpa-rnof-errw_rsub)*deltim
+      IF ( DEF_URBAN_IRRIG ) errorw = errorw - urb_irrig*(1-froof)*fgper*deltim
       xerr   = errorw/deltim
 
 #if(defined CoLMDEBUG)
