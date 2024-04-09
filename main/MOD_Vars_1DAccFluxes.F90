@@ -51,6 +51,7 @@ module MOD_Vars_1DAccFluxes
    real(r8), allocatable :: a_gssun (:)
    real(r8), allocatable :: a_gssha (:)
    real(r8), allocatable :: a_rss   (:)
+   real(r8), allocatable :: a_rlit   (:)
    real(r8), allocatable :: a_wdsrf  (:)
    real(r8), allocatable :: a_zwt    (:)
    real(r8), allocatable :: a_wa     (:)
@@ -385,6 +386,7 @@ contains
             allocate (a_gssun     (numpatch))
             allocate (a_gssha     (numpatch))
             allocate (a_rss       (numpatch))
+            allocate (a_rlit      (numpatch))
             allocate (a_wdsrf     (numpatch))
 
             allocate (a_zwt       (numpatch))
@@ -726,6 +728,7 @@ contains
             deallocate (a_gssun     )
             deallocate (a_gssha     )
             deallocate (a_rss       )
+            deallocate (a_rlit      )
             deallocate (a_wdsrf     )
 
             deallocate (a_zwt       )
@@ -1066,6 +1069,7 @@ contains
             a_gssun   (:) = spval
             a_gssha   (:) = spval
             a_rss     (:) = spval
+            a_rlit    (:) = spval
 
             a_wdsrf   (:) = spval
             a_zwt     (:) = spval
@@ -1478,6 +1482,7 @@ contains
             call acc1d (gssha_out     , a_gssha )
 
             call acc1d (rss    , a_rss    )
+            call acc1d (rlit   , a_rlit   )
             call acc1d (wdsrf  , a_wdsrf  )
             call acc1d (zwt    , a_zwt    )
             call acc1d (wa     , a_wa     )

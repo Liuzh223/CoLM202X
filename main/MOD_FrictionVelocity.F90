@@ -9,6 +9,7 @@ MODULE MOD_FrictionVelocity
   public :: moninobuk
   public :: moninobukm
   public :: moninobukini
+  public :: fm01m
 
 
 ! PRIVATE MEMBER FUNCTIONS:
@@ -164,7 +165,6 @@ MODULE MOD_FrictionVelocity
         endif
 
  end subroutine moninobuk
-
 
  subroutine moninobukm(hu,ht,hq,displa,z0m,z0h,z0q,obu,um,displat,z0mt,&
                        ustar,fh2m,fq2m,htop,fmtop,fm,fh,fq,fht,fqt,phih)
@@ -541,6 +541,38 @@ MODULE MOD_FrictionVelocity
 
  end subroutine moninobukini
 
+ subroutine fm01m(z0m,obu,fm01)
+  use MOD_Precision
+  implicit none
+
+! ---------------------- dummy argument --------------------------------
+
+  real(r8), INTENT(in) :: z0m      ! roughness length, momentum [m]
+  real(r8), INTENT(in) :: obu      ! monin-obukhov length (m)
+  real(r8), INTENT(out) :: fm01    ! integral of profile function for momentum at 10m
+
+!------------------------ local variables ------------------------------
+
+  real(r8) zldis  ! reference height "minus" zero displacement heght [m]
+  real(r8) zetam  ! transition point of flux-gradient relation (wind profile)
+  real(r8) zeta   ! dimensionless height used in Monin-Obukhov theory
+
+
+        ! for 0.1 meter wind-velocity
+        zldis=0.1+z0m
+        zeta=zldis/obu
+        zetam=1.574
+        if(zeta < -zetam)then           ! zeta < -1
+          fm01  = log(-zetam*obu/z0m) - psi(1,-zetam) &
+                + psi(1,z0m/obu) + 1.14*((-zeta)**0.333-(zetam)**0.333)
+        else if(zeta < 0.)then          ! -1 <= zeta < 0
+          fm01  = log(zldis/z0m) - psi(1,zeta) + psi(1,z0m/obu)
+        else if(zeta <= 1.)then         !  0 <= ztea <= 1
+          fm01  = log(zldis/z0m) + 5.*zeta - 5.*z0m/obu
+        else                            !  1 < zeta, phi=5+zeta
+          fm01  = log(obu/z0m) + 5. - 5.*z0m/obu + (5.*log(zeta)+zeta-1.)
+        endif
+ end subroutine fm01m
 
 
  real(r8) function psi(k,zeta)

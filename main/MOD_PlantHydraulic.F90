@@ -26,7 +26,7 @@ MODULE MOD_PlantHydraulic
 
    subroutine PlantHydraulicStress_twoleaf (nl_soil   ,nvegwcs   ,z_soi    ,&
                          dz_soi    ,rootfr    ,psrf       ,qsatl   ,&
-                         qaf       ,tl        ,rb      ,rss, &
+                         qaf       ,tl        ,rb         ,rss        ,rlit       ,&
                          ra        ,rd        ,rstfacsun  ,rstfacsha  ,cintsun    ,&
                          cintsha   ,laisun    ,laisha     ,rhoair     ,fwet       ,&
                          sai       ,kmax_sun  ,kmax_sha   ,kmax_xyl   ,kmax_root  ,&
@@ -60,6 +60,7 @@ MODULE MOD_PlantHydraulic
 
   real(r8),intent(in) :: &
        rss,          &! soil surface resistance [s/m]
+       rlit,          &! soil surface resistance [s/m]
        psrf,      & ! surface atmospheric pressure (pa)
        qg,           &! specific humidity at ground surface [kg/kg]
        qm             ! specific humidity at reference height [kg/kg]
@@ -222,7 +223,7 @@ MODULE MOD_PlantHydraulic
               gb_mol, gs0sun, gs0sha, qsatl, qaf, qg, qm, rhoair, &
               psrf, fwet, laisun, laisha, sai, htop, tl, kmax_sun, &
               kmax_sha, kmax_xyl, kmax_root, psi50_sun, psi50_sha, psi50_xyl, psi50_root, ck, &
-              nl_soil, z_soi, rss, ra, rd, smp, k_soil_root, k_ax_root, gssun, gssha)
+              nl_soil, z_soi, rss,rlit, ra, rd, smp, k_soil_root, k_ax_root, gssun, gssha)
 
       vegwp(1:nvegwcs) = x
 
@@ -231,7 +232,7 @@ MODULE MOD_PlantHydraulic
   subroutine calcstress_twoleaf(x,nvegwcs,rstfacsun, rstfacsha, etrsun, etrsha, rootflux,&
              gb_mol, gs0sun, gs0sha, qsatl, qaf, qg, qm,rhoair,&
              psrf, fwet, laisun, laisha, sai, htop, tl, kmax_sun, kmax_sha, kmax_xyl, kmax_root, &
-             psi50_sun, psi50_sha, psi50_xyl, psi50_root, ck, nl_soil, z_soi, rss, raw, rd, smp, &
+             psi50_sun, psi50_sha, psi50_xyl, psi50_root, ck, nl_soil, z_soi, rss, rlit, raw, rd, smp, &
              k_soil_root, k_ax_root, gssun, gssha)
     !
     ! DESCRIPTIONS
@@ -259,6 +260,7 @@ MODULE MOD_PlantHydraulic
     real(r8)               , intent(in)     :: psrf                   ! atmospheric pressure [Pa]
     real(r8)               , intent(in)     :: fwet                   ! fraction of foliage that is green and dry [-]
     real(r8)               , intent(in)     :: rss                    ! soil surface resistance [s/m]
+    real(r8)               , intent(in)     :: rlit                   ! soil surface resistance [s/m]
     real(r8)               , intent(in)     :: raw                    ! moisture resistance [s/m]
     real(r8)               , intent(in)     :: rd                     ! aerodynamical resistance between ground and canopy air
     real(r8)               , intent(in)     :: laisun                 ! Sunlit leaf area index
@@ -322,7 +324,7 @@ MODULE MOD_PlantHydraulic
     gssun=gs0sun
     gssha=gs0sha
     call getqflx_gs2qflx_twoleaf(gb_mol,gssun,gssha,qflx_sun,qflx_sha,qsatl,qaf, &
-                                 rhoair,psrf,laisun,laisha,sai,fwet,tl,rss,raw,rd,qg,qm)
+                                 rhoair,psrf,laisun,laisha,sai,fwet,tl,rss,rlit,raw,rd,qg,qm)
     x_root_top  = x(root)
 
     if(qflx_sun .gt. 0 .or. qflx_sha .gt. 0)then
@@ -350,7 +352,7 @@ MODULE MOD_PlantHydraulic
 
     ! retrieve stressed stomatal conductance
        call getqflx_qflx2gs_twoleaf(gb_mol,gssun,gssha,etrsun,etrsha,qsatl,qaf, &
-                                    rhoair,psrf,laisun,laisha,sai,fwet,tl,rss,raw,rd,qg,qm)
+                                    rhoair,psrf,laisun,laisha,sai,fwet,tl,rss,rlit,raw,rd,qg,qm)
 
        tprcor   = 44.6*273.16*psrf/1.013e5
     ! compute water stress
@@ -520,7 +522,7 @@ MODULE MOD_PlantHydraulic
 
   !--------------------------------------------------------------------------------
   subroutine getvegwp_twoleaf(x, nvegwcs, nl_soil, z_soi, gb_mol, gs_mol_sun, gs_mol_sha, &
-             qsatl, qaf,qg,qm,rhoair, psrf, fwet, laisun, laisha, htop, sai, tl, rss, &
+             qsatl, qaf,qg,qm,rhoair, psrf, fwet, laisun, laisha, htop, sai, tl, rss,rlit, &
              raw, rd, smp, k_soil_root, k_ax_root, kmax_xyl, kmax_root, rstfacsun, rstfacsha, &
              psi50_sun, psi50_sha, psi50_xyl, psi50_root, ck, rootflux, etrsun, etrsha)
     ! !DESCRIPTION:
@@ -561,6 +563,7 @@ MODULE MOD_PlantHydraulic
     real(r8)      , intent(in)     :: psi50_root             ! water potential at 50% loss of root tissue conductance (mmH2O)
     real(r8)      , intent(in)     :: ck                     !
     real(r8)      , intent(in)     :: rss                    ! soil surface resistance [s/m]
+    real(r8)      , intent(in)     :: rlit                    ! soil surface resistance [s/m]
     real(r8)      , intent(in)     :: raw        ! moisture resistance [s/m]
     real(r8)      , intent(in)     :: rd         ! aerodynamical resistance between ground and canopy air
     real(r8)      , intent(in)     :: smp(nl_soil)           ! soil matrix potential
@@ -596,7 +599,7 @@ MODULE MOD_PlantHydraulic
     !compute transpiration demand
     havegs=.true.
     call getqflx_gs2qflx_twoleaf(gb_mol,gs_mol_sun,gs_mol_sha,etrsun,etrsha,qsatl,qaf, &
-                 rhoair,psrf,laisun,laisha,sai,fwet,tl,rss,raw,rd,qg,qm,rstfacsun,rstfacsha)
+                 rhoair,psrf,laisun,laisha,sai,fwet,tl,rss,rlit,raw,rd,qg,qm,rstfacsun,rstfacsha)
 
     !calculate root water potential
     qeroot = etrsun + etrsha
@@ -625,7 +628,7 @@ MODULE MOD_PlantHydraulic
 
   !--------------------------------------------------------------------------------
   subroutine getqflx_gs2qflx_twoleaf(gb_mol,gs_mol_sun,gs_mol_sha,qflx_sun,qflx_sha,qsatl,qaf,&
-                             rhoair,psrf,laisun,laisha,sai,fwet,tl,rss,raw,rd,qg,qm,rstfacsun,rstfacsha)
+                             rhoair,psrf,laisun,laisha,sai,fwet,tl,rss,rlit,raw,rd,qg,qm,rstfacsun,rstfacsha)
     ! !DESCRIPTION:
     !  calculate sunlit and shaded transpiration using gb_MOL and gs_MOL
     ! !USES:
@@ -650,6 +653,7 @@ MODULE MOD_PlantHydraulic
     real(r8) , intent(in)     :: fwet       ! fraction of foliage that is green and dry [-]
     real(r8) , intent(in)     :: tl         ! shaded leaf temperature
     real(r8) , intent(in)     :: rss        ! soil surface resistance [s/m]
+    real(r8) , intent(in)     :: rlit        ! soil surface resistance [s/m]
     real(r8) , intent(in)     :: raw        ! moisture resistance [s/m]
     real(r8) , intent(in)     :: rd         ! aerodynamical resistance between ground and canopy air
     real(r8) ,optional, intent(in)     :: rstfacsun
@@ -682,9 +686,9 @@ MODULE MOD_PlantHydraulic
        cgw = 1. / rd
     ELSE
        IF (DEF_RSS_SCHEME .eq. 4) THEN
-          cgw = rss / rd
+          cgw = rss / (rd + rlit)
        ELSE
-          cgw = 1. / (rd + rss)
+          cgw = 1. / (rd + rss + rlit)
        END IF
     END IF
     cfw = (1.-delta*(1.-fwet)) * (laisun+laisha+sai)*gb_mol/cf + (1.-fwet)*delta*&
@@ -717,7 +721,7 @@ MODULE MOD_PlantHydraulic
   end subroutine getqflx_gs2qflx_twoleaf
 
   subroutine getqflx_qflx2gs_twoleaf(gb_mol,gs_mol_sun,gs_mol_sha,qflx_sun,qflx_sha,qsatl,qaf, &
-                     rhoair,psrf,laisun,laisha,sai,fwet,tl,rss,raw,rd,qg,qm)
+                     rhoair,psrf,laisun,laisha,sai,fwet,tl,rss,rlit,raw,rd,qg,qm)
     ! !DESCRIPTION:
     !  calculate sunlit and shaded transpiration using gb_MOL and gs_MOL
     ! !USES:
@@ -742,6 +746,7 @@ MODULE MOD_PlantHydraulic
     real(r8) , intent(in)     :: fwet       ! fraction of foliage that is green and dry [-]
     real(r8) , intent(in)     :: tl         ! leaf temperature
     real(r8) , intent(in)     :: rss        ! soil surface resistance [s/m]
+    real(r8) , intent(in)     :: rlit       ! soil surface resistance [s/m]
     real(r8) , intent(in)     :: raw        ! moisture resistance [s/m]
     real(r8) , intent(in)     :: rd         ! aerodynamical resistance between ground and canopy air
 
@@ -780,9 +785,9 @@ MODULE MOD_PlantHydraulic
           cgw = 1. / rd
        ELSE
           IF (DEF_RSS_SCHEME .eq. 4) THEN
-             cgw = rss / rd
+             cgw = rss / (rd +rlit)
           ELSE
-             cgw = 1. / (rd + rss)
+             cgw = 1. / (rd + rss + rlit)
           END IF
        END IF
        cwet     = (1.-delta*(1.-fwet)) * (laisun + laisha + sai) * gb_mol / cf

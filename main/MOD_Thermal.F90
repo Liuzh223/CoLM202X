@@ -67,7 +67,7 @@ MODULE MOD_Thermal
                       sm          ,tref        ,qref        ,&
                       trad        ,rst         ,assim       ,respc      ,&
                       errore      ,emis        ,z0m         ,zol        ,&
-                      rib         ,ustar       ,qstar       ,tstar      ,&
+                      rib,rlit    ,ustar       ,qstar       ,tstar      ,&
                       fm          ,fh          ,fq          ,pg_rain    ,&
                       pg_snow     ,t_precip    ,qintr_rain  ,qintr_snow ,&
                       snofrz      ,sabg_snow_lyr                         )
@@ -126,6 +126,9 @@ MODULE MOD_Thermal
   USE MOD_Namelist, only: DEF_USE_PLANTHYDRAULICS, DEF_RSS_SCHEME, DEF_SPLIT_SOILSNOW, &
                           DEF_USE_LCT,DEF_USE_PFT,DEF_USE_PC
 
+#ifdef BGC   
+  USE MOD_BGC_Vars_1DPFTFluxes, only: leafc_to_litter_p 
+#endif
   IMPLICIT NONE
 
 !---------------------Argument------------------------------------------
@@ -338,6 +341,7 @@ MODULE MOD_Thermal
        z0m,          &! effective roughness [m]
        zol,          &! dimensionless height (z/L) used in Monin-Obukhov theory
        rib,          &! bulk Richardson number in surface layer
+       rlit,         &! litter resistance 
        ustar,        &! u* in similarity theory [m/s]
        qstar,        &! q* in similarity theory [kg/kg]
        tstar,        &! t* in similarity theory [K]
@@ -433,6 +437,7 @@ MODULE MOD_Thermal
   real(r8), allocatable :: ulrad_p       (:)
   real(r8), allocatable :: zol_p         (:)
   real(r8), allocatable :: rib_p         (:)
+  real(r8), allocatable :: rlit_p        (:)
   real(r8), allocatable :: ustar_p       (:)
   real(r8), allocatable :: qstar_p       (:)
   real(r8), allocatable :: tstar_p       (:)
@@ -469,6 +474,7 @@ MODULE MOD_Thermal
 
       emis   = 0.;  z0m    = 0.
       zol    = 0.;  rib    = 0.
+      rlit   = 0.
       ustar  = 0.;  qstar  = 0.
       tstar  = 0.;  rootr  = 0.
       rootflux = 0.
@@ -649,7 +655,12 @@ IF ( patchtype==0.and.DEF_USE_LCT .or. patchtype>0 ) THEN
                  gssun_out  ,gssha_out  ,forc_po2m ,forc_pco2m ,z0h_g      ,&
                  obu_g      ,ustar_g    ,zlnd      ,zsno       ,fsno       ,&
                  sigf       ,etrc       ,t_grnd    ,qg,rss     ,&
-                 t_soil     ,t_snow     ,q_soil    ,q_snow     ,dqgdT      ,&
+                 t_soil     ,t_snow     ,q_soil    ,q_snow     ,&
+                 
+#ifdef BGC                 
+                 leafc_to_litter_p(1),&
+#endif                         
+                 dqgdT      ,&
                  emg        ,tleaf      ,ldew      ,ldew_rain  ,ldew_snow  ,&
                  taux       ,tauy       ,&
                  fseng      ,fseng_soil ,fseng_snow,&
@@ -657,7 +668,7 @@ IF ( patchtype==0.and.DEF_USE_LCT .or. patchtype>0 ) THEN
                  cgrnd      ,cgrndl     ,cgrnds    ,&
                  tref       ,qref       ,rst       ,assim      ,respc      ,&
                  fsenl      ,fevpl      ,etr       ,dlrad      ,ulrad      ,&
-                 z0m        ,zol        ,rib       ,ustar      ,qstar      ,&
+                 z0m        ,zol        ,rib,rlit  ,ustar      ,qstar      ,&
                  tstar      ,fm         ,fh        ,fq         ,rootfr     ,&
                  kmax_sun    ,kmax_sha  ,kmax_xyl  ,kmax_root  ,psi50_sun  ,&
                  psi50_sha   ,psi50_xyl ,psi50_root,ck         ,vegwp      ,&
@@ -715,6 +726,7 @@ IF (DEF_USE_PFT .or. patchclass(ipatch)==CROPLAND) THEN
       allocate ( ulrad_p          (ps:pe) )
       allocate ( zol_p            (ps:pe) )
       allocate ( rib_p            (ps:pe) )
+      allocate ( rlit_p           (ps:pe) )
       allocate ( ustar_p          (ps:pe) )
       allocate ( qstar_p          (ps:pe) )
       allocate ( tstar_p          (ps:pe) )
@@ -789,6 +801,9 @@ IF (DEF_USE_PFT .or. patchclass(ipatch)==CROPLAND) THEN
                  obu_g      ,ustar_g    ,zlnd       ,zsno       ,fsno       ,&
                  sigf_p(i)  ,etrc_p(i)  ,t_grnd     ,qg,rss     ,&
                  t_soil     ,t_snow     ,q_soil     ,q_snow     ,&
+#ifdef BGC                 
+                 leafc_to_litter_p(i),&
+#endif                         
                  dqgdT      ,&
                  emg        ,tleaf_p(i) ,ldew_p(i)  ,ldew_rain_p(i),ldew_snow_p(i),&
                  taux_p(i)  ,tauy_p(i)  ,&
@@ -797,7 +812,7 @@ IF (DEF_USE_PFT .or. patchclass(ipatch)==CROPLAND) THEN
                  cgrnd_p(i) ,cgrndl_p(i),cgrnds_p(i),&
                  tref_p(i)  ,qref_p(i)  ,rst_p(i)   ,assim_p(i) ,respc_p(i) ,&
                  fsenl_p(i) ,fevpl_p(i) ,etr_p(i)   ,dlrad_p(i) ,ulrad_p(i) ,&
-                 z0m_p(i)   ,zol_p(i)   ,rib_p(i)   ,ustar_p(i) ,qstar_p(i) ,&
+                 z0m_p(i)   ,zol_p(i)   ,rib_p(i),rlit_p(i),ustar_p(i) ,qstar_p(i) ,&
                  tstar_p(i) ,fm_p(i)    ,fh_p(i)    ,fq_p(i)    ,rootfr_p(:,p),&
                  kmax_sun_p(p) ,kmax_sha_p(p) ,kmax_xyl_p(p)  ,kmax_root_p(p) ,psi50_sun_p(p),&
                  psi50_sha_p(p),psi50_xyl_p(p),psi50_root_p(p),ck_p(p)        ,vegwp_p(:,i)  ,&
@@ -867,7 +882,7 @@ IF (DEF_USE_PC .and. patchclass(ipatch)/=CROPLAND) THEN
       etr_p   (ps:pe) = 0.
       hprl_p  (ps:pe) = 0.
       z0m_p   (ps:pe) = (1.-fsno)*zlnd + fsno*zsno
-
+      rlit            = 0.
       IF (DEF_USE_PLANTHYDRAULICS) THEN
          vegwp_p (:,ps:pe) = -2.5e4
       ENDIF
@@ -883,12 +898,15 @@ IF (DEF_USE_PC .and. patchclass(ipatch)/=CROPLAND) THEN
          obu_g             ,ustar_g           ,zlnd              ,zsno              ,fsno              ,&
          sigf_p(ps:pe)     ,etrc_p(:)         ,t_grnd            ,qg,rss            ,dqgdT             ,&
          emg               ,t_soil            ,t_snow            ,q_soil            ,q_snow            ,&
+#ifdef BGC                 
+         leafc_to_litter_p(ps:pe),&
+#endif                         
          z0m_p(ps:pe)      ,tleaf_p(ps:pe)    ,ldew_p(ps:pe)     ,ldew_rain_p(ps:pe),ldew_snow_p(ps:pe),&
          taux              ,tauy              ,fseng             ,fseng_soil        ,fseng_snow        ,&
          fevpg             ,fevpg_soil        ,fevpg_snow        ,cgrnd             ,cgrndl            ,&
          cgrnds            ,tref              ,qref              ,rst_p(ps:pe)      ,assim_p(ps:pe)    ,&
          respc_p(ps:pe)    ,fsenl_p(ps:pe)    ,fevpl_p(ps:pe)    ,etr_p(ps:pe)      ,dlrad             ,&
-         ulrad             ,z0m               ,zol               ,rib               ,ustar             ,&
+         ulrad             ,z0m               ,zol               ,rib,rlit          ,ustar             ,&
          qstar             ,tstar             ,fm                ,fh                ,fq                ,&
          vegwp_p(:,ps:pe)  ,gs0sun_p(ps:pe)   ,gs0sha_p(ps:pe)   ,assimsun_p(:)     ,etrsun_p(:)       ,&
          assimsha_p(:)     ,etrsha_p(:)       ,&
@@ -934,6 +952,7 @@ IF (DEF_USE_PFT .or. patchclass(ipatch)==CROPLAND) THEN
       z0m           = sum( z0m_p       (ps:pe)*pftfrac(ps:pe) )
       zol           = sum( zol_p       (ps:pe)*pftfrac(ps:pe) )
       rib           = sum( rib_p       (ps:pe)*pftfrac(ps:pe) )
+      rlit          = sum( rlit_p      (ps:pe)*pftfrac(ps:pe) )
       ustar         = sum( ustar_p     (ps:pe)*pftfrac(ps:pe) )
       qstar         = sum( qstar_p     (ps:pe)*pftfrac(ps:pe) )
       tstar         = sum( tstar_p     (ps:pe)*pftfrac(ps:pe) )
@@ -990,6 +1009,7 @@ IF (DEF_USE_PFT .or. patchclass(ipatch)==CROPLAND) THEN
       deallocate ( ulrad_p     )
       deallocate ( zol_p       )
       deallocate ( rib_p       )
+      deallocate ( rlit_p      )
       deallocate ( ustar_p     )
       deallocate ( qstar_p     )
       deallocate ( tstar_p     )

@@ -461,6 +461,7 @@ MODULE MOD_Vars_TimeVariables
      real(r8), allocatable :: wat           (:) ! total water storage [mm]
      real(r8), allocatable :: wdsrf         (:) ! depth of surface water [mm]
      real(r8), allocatable :: rss           (:) ! soil surface resistance [s/m]
+     real(r8), allocatable :: rlit          (:) ! litter resistance [s/m]
 
      real(r8), allocatable :: t_lake      (:,:) ! lake layer teperature [K]
      real(r8), allocatable :: lake_icefrac(:,:) ! lake mass fraction of lake layer that is frozen
@@ -613,6 +614,7 @@ MODULE MOD_Vars_TimeVariables
            allocate (wat                         (numpatch)); wat           (:) = spval
            allocate (wdsrf                       (numpatch)); wdsrf         (:) = spval
            allocate (rss                         (numpatch)); rss           (:) = spval
+           allocate (rlit                        (numpatch)); rlit          (:) = spval
            allocate (t_lake              (nl_lake,numpatch)); t_lake      (:,:) = spval
            allocate (lake_icefrac        (nl_lake,numpatch)); lake_icefrac(:,:) = spval
            allocate (savedtke1                   (numpatch)); savedtke1     (:) = spval
@@ -769,6 +771,7 @@ MODULE MOD_Vars_TimeVariables
            deallocate (wat                    )
            deallocate (wdsrf                  )
            deallocate (rss                    )
+           deallocate (rlit                   )
 
            deallocate (t_lake                 ) ! new lake scheme
            deallocate (lake_icefrac           ) ! new lake scheme
@@ -986,6 +989,7 @@ ENDIF
      CALL ncio_write_vector (file_restart, 'wetwat  '   , 'patch', landpatch, wetwat    , compress)                    ! water storage in wetland [mm]
      CALL ncio_write_vector (file_restart, 'wdsrf   '   , 'patch', landpatch, wdsrf     , compress)                    ! depth of surface water [mm]
      CALL ncio_write_vector (file_restart, 'rss     '   , 'patch', landpatch, rss       , compress)                    ! soil surface resistance [s/m]
+     CALL ncio_write_vector (file_restart, 'rlit    '   , 'patch', landpatch, rlit      , compress)                    ! litter resistance [s/m]
 
      CALL ncio_write_vector (file_restart, 't_lake  '   , 'lake', nl_lake, 'patch', landpatch, t_lake      , compress) !
      CALL ncio_write_vector (file_restart, 'lake_icefrc', 'lake', nl_lake, 'patch', landpatch, lake_icefrac, compress) !
@@ -1150,6 +1154,7 @@ ENDIF
      CALL ncio_read_vector (file_restart, 'wetwat  '   , landpatch, wetwat     ) ! water storage in wetland [mm]
      CALL ncio_read_vector (file_restart, 'wdsrf   '   , landpatch, wdsrf      ) ! depth of surface water [mm]
      CALL ncio_read_vector (file_restart, 'rss     '   , landpatch, rss        ) ! soil surface resistance [s/m]
+     CALL ncio_read_vector (file_restart, 'rlit    '   , landpatch, rlit       ) ! soil surface resistance [s/m]
 
      CALL ncio_read_vector (file_restart, 't_lake  '   , nl_lake, landpatch, t_lake      ) !
      CALL ncio_read_vector (file_restart, 'lake_icefrc', nl_lake, landpatch, lake_icefrac) !
@@ -1283,6 +1288,7 @@ ENDIF
      CALL check_vector_data ('wetwat      [mm]   ', wetwat     ) ! water storage in wetland [mm]
      CALL check_vector_data ('wdsrf       [mm]   ', wdsrf      ) ! depth of surface water [mm]
      CALL check_vector_data ('rss         [s/m]  ', rss        ) ! soil surface resistance [s/m]
+     CALL check_vector_data ('rlit        [s/m]  ', rlit       ) ! litter resistance [s/m]
      CALL check_vector_data ('t_lake      [K]    ', t_lake      )!
      CALL check_vector_data ('lake_icefrc [-]    ', lake_icefrac)!
      CALL check_vector_data ('savedtke1   [W/m K]', savedtke1   )!

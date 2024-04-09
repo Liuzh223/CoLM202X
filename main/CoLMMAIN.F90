@@ -70,7 +70,7 @@ SUBROUTINE CoLMMAIN ( &
            mss_dst1,     mss_dst2,     mss_dst3,      mss_dst4,     &
 
          ! additional diagnostic variables for output
-           laisun,       laisha,       rootr,rootflux,rss,          &
+           laisun,       laisha,       rootr,rootflux,rss,rlit,     &
            rstfacsun_out,rstfacsha_out,gssun_out,    gssha_out,     &
            assimsun_out, etrsun_out,   assimsha_out, etrsha_out,    &
            h2osoi,       wat,          &
@@ -382,6 +382,7 @@ SUBROUTINE CoLMMAIN ( &
         gssha_out     ,&! shaded stomata conductance
         wat           ,&! total water storage
         rss           ,&! soil surface resistance [s/m]
+        rlit          ,&! litter resistance [s/m]
         rootr(nl_soil),&! water exchange between soil and root. Positive: soil->root [?]
         rootflux(nl_soil),&! water exchange between soil and root in different layers. Posiitive: soil->root [?]
         h2osoi(nl_soil) ! volumetric soil water in layers [m3/m3]
@@ -731,7 +732,7 @@ ENDIF
            trad              ,rst               ,assim             ,respc             ,&
 
            errore            ,emis              ,z0m               ,zol               ,&
-           rib               ,ustar             ,qstar             ,tstar             ,&
+           rib,rlit          ,ustar             ,qstar             ,tstar             ,&
            fm                ,fh                ,fq                ,pg_rain           ,&
            pg_snow           ,t_precip          ,qintr_rain        ,qintr_snow        ,&
            snofrz(lbsn:0)    ,sabg_snow_lyr(lb:1)                                      )

@@ -398,7 +398,7 @@ ENDIF
          rsubst = 0.
          rnof = 0.
          do j = 1, nl_soil
-            if(t_soisno(j)>tfrz)then
+            if(t_soisno(j)>=tfrz)then
                wice_soisno(j) = 0.0
                wliq_soisno(j) = porsl(j)*dz_soisno(j)*1000.
             endif
@@ -963,7 +963,7 @@ ENDIF
 
          wresi(:) = 0.
          DO j = 1, nl_soil
-            if(t_soisno(j)>tfrz)then
+            if(t_soisno(j)>=tfrz)then
                wresi(j) = max(wliq_soisno(j) - porsl(j)*dz_soisno(j)*1000., 0.)
                wliq_soisno(j) = wliq_soisno(j) - wresi(j)
             endif
@@ -1803,7 +1803,7 @@ ENDIF
              dsmpdw(j) = 0.
           endif
        else
-          if(t_soisno(j)>tfrz) then
+          if(t_soisno(j)>=tfrz) then
              if(porsl(j)<1.e-6)then     ! bed rock
                 s_node = 0.001
                 smp(j) = psi0(j)

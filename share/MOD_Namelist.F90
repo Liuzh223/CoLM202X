@@ -169,6 +169,7 @@ MODULE MOD_Namelist
                                                    ! 8: Yan Hengnian, He Hailong et al.(2019)
    LOGICAL :: DEF_USE_SUPERCOOL_WATER = .true.     ! supercooled soil water scheme, Niu & Yang (2006)
 
+   LOGICAL :: DEF_RLIT = .true.     ! supercooled soil water scheme, Niu & Yang (2006)
 
    ! Options for soil reflectance setting schemes
    ! 1: Guessed soil color type according to land cover classes
@@ -402,6 +403,7 @@ MODULE MOD_Namelist
       LOGICAL :: z0m          = .true.
       LOGICAL :: trad         = .true.
       LOGICAL :: rss          = .true.
+      LOGICAL :: rlit         = .true.
       LOGICAL :: tref         = .true.
       LOGICAL :: qref         = .true.
 #ifdef URBAN_MODEL
@@ -768,6 +770,7 @@ CONTAINS
          DEF_USE_SOILPAR_UPS_FIT,         &
          DEF_THERMAL_CONDUCTIVITY_SCHEME, &
          DEF_USE_SUPERCOOL_WATER,         &
+         DEF_RLIT,                        &
          DEF_SOIL_REFL_SCHEME,            &
          DEF_RSS_SCHEME,                  &
          DEF_SPLIT_SOILSNOW,              &
@@ -1189,7 +1192,9 @@ CONTAINS
       CALL mpi_bcast (DEF_USE_SOILPAR_UPS_FIT,          1, mpi_logical, p_root, p_comm_glb, p_err)
       CALL mpi_bcast (DEF_THERMAL_CONDUCTIVITY_SCHEME,  1, mpi_integer, p_root, p_comm_glb, p_err)
       CALL mpi_bcast (DEF_USE_SUPERCOOL_WATER,          1, mpi_logical, p_root, p_comm_glb, p_err)
-
+      
+      ! 07/2023, added by zhuo liu
+      CALL mpi_bcast (DEF_RLIT,                         1, mpi_integer, p_root, p_comm_glb, p_err)
       ! 06/2023, added by hua yuan
       CALL mpi_bcast (DEF_SOIL_REFL_SCHEME,             1, mpi_integer, p_root, p_comm_glb, p_err)
       ! 07/2023, added by zhuo liu
@@ -1390,6 +1395,7 @@ CONTAINS
       CALL sync_hist_vars_one (DEF_hist_vars%z0m         ,  set_defaults)
       CALL sync_hist_vars_one (DEF_hist_vars%trad        ,  set_defaults)
       CALL sync_hist_vars_one (DEF_hist_vars%rss         ,  set_defaults)
+      CALL sync_hist_vars_one (DEF_hist_vars%rlit        ,  set_defaults)
       CALL sync_hist_vars_one (DEF_hist_vars%tref        ,  set_defaults)
       CALL sync_hist_vars_one (DEF_hist_vars%qref        ,  set_defaults)
 #ifdef URBAN_MODEL

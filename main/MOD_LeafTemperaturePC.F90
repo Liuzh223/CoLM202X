@@ -30,12 +30,16 @@ CONTAINS
               gssun     ,gssha     ,po2m      ,pco2m     ,z0h_g     ,obug      ,&
               ustarg    ,zlnd      ,zsno      ,fsno      ,sigf      ,etrc      ,&
               tg        ,qg        ,rss       ,dqgdT     ,emg       ,t_soil    ,&
-              t_snow    ,q_soil    ,q_snow    ,z0mpc     ,tl        ,ldew      ,&
+              t_snow    ,q_soil    ,q_snow    ,&
+#ifdef BGC                 
+              leafc_to_litter,&
+#endif                         
+              z0mpc     ,tl        ,ldew      ,&
               ldew_rain ,ldew_snow ,taux      ,tauy      ,fseng     ,fseng_soil,&
               fseng_snow,fevpg     ,fevpg_soil,fevpg_snow,cgrnd     ,cgrndl    ,&
               cgrnds    ,tref      ,qref      ,rst       ,assim     ,respc     ,&
               fsenl     ,fevpl     ,etr       ,dlrad     ,ulrad     ,z0m       ,&
-              zol       ,rib       ,ustar     ,qstar     ,tstar     ,fm        ,&
+              zol       ,rib,rlit  ,ustar     ,qstar     ,tstar     ,fm        ,&
               fh        ,fq        ,vegwp     ,gs0sun    ,gs0sha    ,assimsun  ,&
               etrsun    ,assimsha  ,etrsha    ,&
 !Ozone stress variables
@@ -81,7 +85,7 @@ CONTAINS
   USE MOD_FrictionVelocity
   USE MOD_CanopyLayerProfile
   USE MOD_Namelist, only: DEF_USE_CBL_HEIGHT, DEF_USE_PLANTHYDRAULICS, DEF_USE_OZONESTRESS, &
-                          DEF_RSS_SCHEME, DEF_Interception_scheme, DEF_SPLIT_SOILSNOW
+                          DEF_RSS_SCHEME, DEF_Interception_scheme, DEF_SPLIT_SOILSNOW, DEF_RLIT
   USE MOD_TurbulenceLEddy
   USE MOD_Qsadv
   USE MOD_AssimStomataConductance
@@ -162,6 +166,9 @@ CONTAINS
         qg,            &! specific humidity at ground surface [kg/kg]
         q_soil,        &! specific humidity at ground surface soil [kg/kg]
         q_snow,        &! specific humidity at ground surface snow [kg/kg]
+#ifdef BGC                 
+        leafc_to_litter(ps:pe),&!
+#endif                         
         dqgdT,         &! temperature derivative of "qg"
         rss,           &! soil surface resistance [s/m]
         emg             ! vegetation emissivity
@@ -230,11 +237,12 @@ CONTAINS
         fevpl,         &! evaporation+transpiration from leaves [mm/s]
         etr,           &! transpiration rate [mm/s]
         hprl            ! precipitation sensible heat from canopy
-
+          
   real(r8), intent(inout) :: &
         z0m,           &! effective roughness [m]
         zol,           &! dimensionless height (z/L) used in Monin-Obukhov theory
         rib,           &! bulk Richardson number in surface layer
+        rlit,          &! litter resistance 
         ustar,         &! friction velocity [m/s]
         tstar,         &! temperature scaling parameter
         qstar,         &! moisture scaling parameter
@@ -340,7 +348,14 @@ CONTAINS
         fht,           &! integral of profile function for heat at the top layer
         fqt,           &! integral of profile function for moisture at the top layer
         phih,          &! phi(h), similarity function for sensible heat
+        f_lit,         &! fraction of sai converted to litter
 
+        dsl_lit  (ps:pe), &! litter layer thickness [m]
+        XX,               &! aqueous diffusivity [m2/s]
+        dt0,              &! hydraulic conductivity [m h2o/s]
+        d0_lit,           &! pore-connectivity related parameter [dimensionless]
+        fm01,             &! integral of profile function for momentum at 10m
+        rlit_p   (ps:pe), &! litter resistance  
         fdry     (ps:pe), &! fraction of foliage that is green and dry [-]
         fwet     (ps:pe), &! fraction of foliage covered by water [-]
         rb       (ps:pe), &! leaf boundary layer resistance [s/m]
@@ -367,7 +382,7 @@ CONTAINS
         rssha    (ps:pe), &! shaded leaf stomatal resistance [s/m]
         respcsun (ps:pe), &! sunlit leaf respiration rate [umol co2 /m**2/ s] [+]
         respcsha (ps:pe)   ! shaded leaf respiration rate [umol co2 /m**2/ s] [+]
-
+       
    integer it, nmozsgn
 
    real(r8) w, csoilcn, z0mg, z0hg, z0qg, elwmax, elwdif, sumrootflux
@@ -1100,7 +1115,7 @@ CONTAINS
 
                    CALL PlantHydraulicStress_twoleaf (nl_soil     ,nvegwcs      ,z_soi        ,&
                          dz_soi       ,rootfr(:,i)  ,psrf         ,qsatl(i)     ,qaf(clev)    ,&
-                         tl(i)        ,rbsun        ,rss          ,raw        ,sum(rd(1:clev)),&
+                         tl(i)        ,rbsun        ,rss,rlit     ,raw        ,sum(rd(1:clev)),&
                          rstfacsun(i) ,rstfacsha(i) ,cintsun(:,i) ,cintsha(:,i) ,laisun(i)    ,&
                          laisha(i)    ,rhoair       ,fwet(i)      ,sai(i)       ,kmax_sun(i)  ,&
                          kmax_sha(i)  ,kmax_xyl(i)  ,kmax_root(i) ,psi50_sun(i) ,psi50_sha(i) ,&
@@ -1149,10 +1164,9 @@ CONTAINS
 
           cfh(:) = 0.
           cfw(:) = 0.
-
+          rlit_p(:)= 0.
           DO i = ps, pe
              IF (fcover(i)>0 .and. lsai(i)>1.e-6) THEN
-
                 clev = canlay(i)
                 delta(i) = 0.0
                 IF(qsatl(i)-qaf(clev) .gt. 0.) delta(i) = 1.0
@@ -1164,14 +1178,33 @@ CONTAINS
                 cfw(i) = (1.-delta(i)*(1.-fwet(i)))*lsai(i)/rb(i) + &
                          (1.-fwet(i))*delta(i)* &
                          ( laisun(i)/(rb(i)+rssun(i)) + laisha(i)/(rb(i)+rssha(i)) )
+! Litter resistance
+
+                IF (DEF_RLIT) THEN 
+#ifdef BGC  
+                   CALL fm01m(z0m,obu,fm01) 
+                   dsl_lit(i)  = 2.*leafc_to_litter(i)*1.0e-3*deltim/62.
+                   XX          = 2.08+fm01*2.38
+                   dt0         = 2.0e-5*2.71828**(fm01*2.60)
+                   d0_lit      = dt0*2.71828**(XX*(0.5-1))
+                   rlit_p(i)   = dsl_lit(i)/d0_lit
+#else
+                   f_lit       = 0.5      
+                   rlit_p(i)   = (1-2.718**(-sai(i)*f_lit))/0.004/ustar
+#endif                   
+                ELSE
+                   rlit_p(i)   = 0.     
+                ENDIF 
              ENDIF
           ENDDO
 
+          rlit  = sum(rlit_p(ps:pe))
           ! initialization
           cah(:) = 0.
           caw(:) = 0.
           cgh(:) = 0.
           cgw(:) = 0.
+
 
           DO i = 1, nlay
              IF (fcover_lay(i)>0 .and. lsai_lay(i)>0) THEN
@@ -1183,15 +1216,16 @@ CONTAINS
                    caw(i) = 1. / rd(i+1)
                 ENDIF
 
+
                 cgh(i) = 1. / rd(i)
                 IF (i == botlay) THEN
                    IF (qg < qaf(botlay)) THEN
                       cgw(i) = 1. / rd(i) !dew case. no soil resistance
                    ELSE
                       IF (DEF_RSS_SCHEME .eq. 4) THEN
-                         cgw(i) = rss/ rd(i)
+                         cgw(i) = rss/ (rd(i) + rlit)
                       ELSE
-                         cgw(i) = 1. / (rd(i) + rss)
+                         cgw(i) = 1. / (rd(i) + rss + rlit)
                       ENDIF
                    ENDIF
                 ELSE

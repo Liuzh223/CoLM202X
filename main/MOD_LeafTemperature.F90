@@ -34,12 +34,17 @@ CONTAINS
               fsun      ,thermk    ,rstfacsun ,rstfacsha ,gssun     ,gssha     ,&
               po2m      ,pco2m     ,z0h_g     ,obug      ,ustarg    ,zlnd      ,&
               zsno      ,fsno      ,sigf      ,etrc      ,tg        ,qg,rss    ,&
-              t_soil    ,t_snow    ,q_soil    ,q_snow    ,dqgdT     ,emg       ,&
+              t_soil    ,t_snow    ,q_soil    ,q_snow                          ,&
+
+#ifdef BGC                 
+              leafc_to_litter,&
+#endif                         
+              dqgdT     ,emg       ,&
               tl        ,ldew      ,ldew_rain ,ldew_snow ,taux      ,tauy      ,&
               fseng     ,fseng_soil,fseng_snow,fevpg     ,fevpg_soil,fevpg_snow,&
               cgrnd     ,cgrndl    ,cgrnds    ,tref      ,qref      ,rst       ,&
               assim     ,respc     ,fsenl     ,fevpl     ,etr       ,dlrad     ,&
-              ulrad     ,z0m       ,zol       ,rib       ,ustar     ,qstar     ,&
+              ulrad     ,z0m       ,zol       ,rib,rlit  ,ustar     ,qstar     ,&
               tstar     ,fm        ,fh        ,fq        ,rootfr    ,&
 !Plant Hydraulic variables
               kmax_sun  ,kmax_sha  ,kmax_xyl  ,kmax_root ,psi50_sun ,psi50_sha ,&
@@ -94,7 +99,7 @@ CONTAINS
   USE MOD_Const_Physical, only: vonkar, grav, hvap, cpair, stefnc, cpliq, cpice, tfrz
   USE MOD_FrictionVelocity
   USE MOD_CanopyLayerProfile
-  USE mod_namelist, only: DEF_USE_CBL_HEIGHT
+  USE mod_namelist, only: DEF_USE_CBL_HEIGHT,DEF_RLIT
   USE MOD_TurbulenceLEddy
   USE MOD_AssimStomataConductance
   USE MOD_Vars_TimeInvariants, only: patchclass
@@ -102,7 +107,6 @@ CONTAINS
   USE MOD_PlantHydraulic, only :PlantHydraulicStress_twoleaf, getvegwp_twoleaf
   USE MOD_Ozone, only: CalcOzoneStress
   USE MOD_Qsadv
-
   IMPLICIT NONE
 
 !-----------------------Arguments---------------------------------------
@@ -195,6 +199,9 @@ CONTAINS
         qg,         &! specific humidity at ground surface [kg/kg]
         q_soil,     &! specific humidity at ground soil surface [kg/kg]
         q_snow,     &! specific humidity at ground snow surface [kg/kg]
+#ifdef BGC                 
+        leafc_to_litter, &!
+#endif                         
         dqgdT,      &! temperature derivative of "qg"
         rss,        &! soil surface resistance [s/m]
         emg          ! vegetation emissivity
@@ -267,6 +274,7 @@ CONTAINS
         z0m,        &! effective roughness [m]
         zol,        &! dimensionless height (z/L) used in Monin-Obukhov theory
         rib,        &! bulk Richardson number in surface layer
+        rlit,       &! litter resistance 
         ustar,      &! friction velocity [m/s]
         tstar,      &! temperature scaling parameter
         qstar,      &! moisture scaling parameter
@@ -365,6 +373,14 @@ CONTAINS
         rsoil,      &! soil respiration
         gah2o,      &! conductance between canopy and atmosphere
         gdh2o,      &! conductance between canopy and ground
+
+        f_lit,      &! 
+        dsl_lit,    &! litter layer thickness [m]
+        XX,         &! aqueous diffusivity [m2/s]
+        dt0,        &! hydraulic conductivity [m h2o/s]
+        d0_lit,     &! pore-connectivity related parameter [dimensionless]
+        fm01,       &! integral of profile function for momentum at 0.1m
+        
         tprcor       ! tf*psur*100./1.013e5
 
    integer it, nmozsgn
@@ -549,6 +565,23 @@ CONTAINS
           z0hg = z0mg/exp(0.13 * (ustar*z0mg/1.5e-5)**0.45)
           z0qg = z0hg
 
+! Litter resistance
+          IF (DEF_RLIT) THEN
+#ifdef BGC   
+             CALL fm01m(z0m,obu,fm01) 
+             dsl_lit    = 2.*leafc_to_litter*1.0e-3*deltim/62.
+             XX         = 2.08+fm01*2.38
+             dt0        = 2.0e-5*2.71828**(fm01*2.60)
+             d0_lit     = dt0*2.71828**(XX*(0.5-1))
+             rlit       = dsl_lit/d0_lit
+#else
+             f_lit      = 0.5      
+             rlit       = (1-2.718**(-sai*f_lit))/0.004/ustar
+#endif             
+          ELSE
+             rlit       = 0.
+          ENDIF     
+
 ! Bulk boundary layer resistance of leaves
           uaf = ustar
           cf = 0.01*sqrtdi/sqrt(uaf)
@@ -637,7 +670,7 @@ CONTAINS
                 ! the average for single leaf. thus,
                 CALL PlantHydraulicStress_twoleaf (       nl_soil    ,nvegwcs    ,&
                       z_soi      ,dz_soi     ,rootfr     ,psrf       ,qsatl      ,&
-                      qaf        ,tl         ,rb         ,rss        ,raw        ,&
+                      qaf        ,tl         ,rb         ,rss,rlit   ,raw        ,&
                       rd         ,rstfacsun  ,rstfacsha  ,cintsun    ,cintsha    ,&
                       laisun     ,laisha     ,rhoair     ,fwet       ,sai        ,&
                       kmax_sun   ,kmax_sha   ,kmax_xyl   ,kmax_root  ,psi50_sun  ,&
@@ -700,9 +733,9 @@ CONTAINS
              cgw = 1. / rd !dew case. no soil resistance
           ELSE
              IF (DEF_RSS_SCHEME .eq. 4) THEN
-                cgw = rss / rd
+                cgw = rss / (rd + rlit)
              ELSE
-                cgw = 1. / (rd + rss)
+                cgw = 1. / (rd + rss + rlit)
              ENDIF
           ENDIF
           cfw = (1.-delta*(1.-fwet))*(lai+sai)/rb + (1.-fwet)*delta* &

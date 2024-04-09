@@ -145,6 +145,7 @@ SUBROUTINE CoLMDRIVER (idate,deltim,dolai,doalb,dosst,oro)
 
          ! additional diagnostic variables for output
            laisun(i),       laisha(i),       rootr(1:,i),rootflux(1:,i),rss(i),&
+           rlit(i),                                                            &
            rstfacsun_out(i),rstfacsha_out(i),gssun_out(i),    gssha_out(i),    &
            assimsun_out(i), etrsun_out(i),   assimsha_out(i), etrsha_out(i),   &
            h2osoi(1:,i),    wat(i),          &

@@ -834,6 +834,10 @@ contains
          call write_history_variable_2d ( DEF_hist_vars%rss, &
              a_rss, file_hist, 'f_rss', itime_in_file, sumarea, filter, &
              'soil surface resistance','s/m')
+         ! litter resistance [m/s]
+         call write_history_variable_2d ( DEF_hist_vars%rlit, &
+             a_rlit, file_hist, 'f_rlit', itime_in_file, sumarea, filter, &
+             'litter resistance','s/m')
 
 #ifdef BGC
          ! leaf carbon display pool
