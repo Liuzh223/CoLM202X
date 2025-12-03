@@ -120,6 +120,10 @@ CONTAINS
         rg_1,             &! inverse of vapor diffusion resistance [m/s]
         rw_1,             &! inverse of volatilization resistance [m/s]
         rss_1,            &! inverse of soil surface resistance [m/s]
+        f_sigmoid,        &! factor
+        f_transition,     &! factor
+        rss_basic,        &! factor
+        rss_adjusted,     &! factor
         tao,              &! tortuosity of the vapor flow paths through the soil matrix
         eps100,           &! air-filled porosity at −1000 mm of water matric potential
         fac,              &! temporal variable for calculating wx/porsl
